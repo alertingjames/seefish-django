@@ -1,0 +1,316 @@
+{% extends 'seefish/base.html' %}
+{% block title %}Seefish{% endblock %}
+
+{% block body %}
+
+<style>
+
+html, body{
+  background: url("/static/images/seabg.jpg") no-repeat center center fixed;
+  background-size:cover;
+}
+
+form h1 {
+  font-size: 22px;
+  color: rgb(255, 255, 255);
+  padding: 19px 22px;
+  border-radius: 5px 5px 0px 0px;
+  margin: auto;
+  text-shadow: none;
+  text-align:middle;
+  font-family: verdana;
+}
+
+#fishForm {
+  border-radius: 5px;
+  max-width:600px;
+  height:auto;
+  margin-top:5%;
+  margin-bottom: 5%;
+  margin-left:auto;
+  margin-right:auto;
+  overflow: hidden;
+}
+
+p span {
+  color: #F00;
+}
+
+p {
+  margin: 0px;
+  font-weight: 600;
+  line-height: 2;
+  color:#fff;
+  font-size:18px;
+}
+
+h1 {
+  text-align:center;
+  color: #666;
+  text-shadow: 1px 1px 0px #FFF;
+  margin:20px 0px 0px 0px
+}
+
+.form-group {
+  overflow: hidden;
+  width:100%;
+}
+
+.contentform {
+  padding: 30px 8px 0px 8px;
+  float:middle;
+  margin:auto;
+}
+
+.bouton-update{
+  background-color:#0077b3;
+  color: #FFF;
+  text-align: center;
+  width: 100%;
+  border:0;
+  padding: 12px 18px;
+  border-radius: 50px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.formcontent {
+  width:100%;
+  float:middle;
+  margin:auto;
+  box-sizing: border-box;
+  padding: 0px;
+}
+
+/* Look like a clicked/depressed button */
+label.cameraButton:active {
+  border-color: #CCC #EEE #EEE #CCC;
+}
+
+/* This is the part that actually hides the 'Choose file' text box for camera inputs */
+label.cameraButton input[accept*="image"] {
+  display: none;
+}
+
+label input {
+  display: none;/* <-- hide the default checkbox */
+}
+
+.redTextShadow {
+    text-shadow: 1px 1px 10px red, 0 0 40px red, 0 0 15px red;
+}
+
+.blueTextShadow {
+    text-shadow: 1px 1px 10px black, 0 0 40px blue, 0 0 15px blue;
+}
+
+</style>
+
+<meta charset="UTF-8">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.min.css">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../lib/w3.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="/static/adgogeo/css/qrstyle.css">
+
+<div style="overflow:auto; height:100%;">
+
+    <form id="fishForm" action="/seefish/identify_fish" method="post" enctype="multipart/form-data">
+    	{% csrf_token %}
+        <center>
+            <div style="font-size:40px; font-weight:800; color:#F7D479; font-family:verdana;
+                text-align:center; width:100%; padding-left:10px; padding-right:10px;">
+                Seefish
+                <label style="font-size:16px; text-shadow:none; color:white; font-weight:500;">
+                    Seefish is a smart useful platform that helps you to identify and classify your regional fishes easily
+                </label>
+            </div>
+        </center>
+
+        <div class="contentform">
+        	<div class="formcontent">
+        		<div class="form-group" style="margin-bottom:20px;" id="picture_layout">
+                    <center>
+                        <p style="font-weight:500;">Load a fish picture to identify <span>*</span></p>
+                    	<div style="display:inline-block; position:relative; width:100%;">
+                    	    <a href="javascript:void(0)">
+                        	    <img src="/static/images/fish.png" style="max-width:100%; max-height:300px; margin-top:10px;
+                        	        margin-bottom:10px; border-radius:20px; object-fit:cover; background-color:rgba(255,255,255,0.3);" id="picture">
+                        	</a>
+
+                        	<label style="position:absolute; bottom:0; margin-left:-40px;">
+                                <img src="/static/images/cameraico.png" style="width:50px; height:50px;">
+                                <input type="file" name="file" value="http://lorempixel.com/100/100/people/9" id="ffile" accept="image/*" style="display:none"/>
+                                <input id="imgdata" hidden required value="">
+                            </label>
+                    	</div>
+                    </center>
+                    <script>
+                    	var imagefile = null;
+                        function readFile() {
+                            if (this.files) {
+                                imagefile = this.files[0];
+                                var picReader = new FileReader();
+                                picReader.addEventListener("load",function(event){
+                                    document.getElementById("picture").src = event.target.result;
+                                    document.getElementById("imgdata").value = event.target.result;
+
+                                    gif.style.display = "none";
+                                    message.style.display = "none";
+                                    message.innerHTML = "Identifying fish...";
+                                });
+
+                                //Read the image
+                                picReader.readAsDataURL(imagefile);
+                            }
+                        }
+                        document.getElementById("ffile").addEventListener("change", readFile);
+                    </script>
+                </div>
+
+                <input hidden name="ID" id="ID">
+
+                <div class="form-group">
+                    <center>
+                        <img src="/static/images/progressbar.gif" style="width:40px; display:none;" id="gif">
+                        <div style="color:white; font-size:20px; display:none;" id="message">Identifying fish...</div>
+                    </center>
+                </div>
+
+                <div class="form-group" style="margin-top:5%;">
+                	<center>
+                	    <button type="button" class="bouton-update" style="width:200px;" onclick="identity()">Process</button>
+                	</center>
+                </div>
+            </div>
+        </div>
+
+    </form>
+
+</div>
+
+<script>
+
+var form = document.getElementById("fishForm");
+var gif = document.getElementById("gif");
+var message = document.getElementById("message");
+
+getID();
+
+function getID() {
+    var Sys = {};
+    var ua = navigator.userAgent.toLowerCase();
+    var s;
+    (s = ua.match(/msie ([\d.]+)/)) ? Sys.ie = s[1] :
+    (s = ua.match(/firefox\/([\d.]+)/)) ? Sys.firefox = s[1] :
+    (s = ua.match(/chrome\/([\d.]+)/)) ? Sys.chrome = s[1] :
+    (s = ua.match(/opera.([\d.]+)/)) ? Sys.opera = s[1] :
+    (s = ua.match(/version\/([\d.]+).*safari/)) ? Sys.safari = s[1] : 0;
+
+    if (Sys.ie) document.getElementById('ID').value = 'IE_' + Sys.ie;
+    if (Sys.firefox) document.getElementById('ID').value = 'Firefox_' + Sys.firefox;
+    if (Sys.chrome) document.getElementById('ID').value = 'Chrome_' + Sys.chrome;
+    if (Sys.opera) document.getElementById('ID').value = 'Opera_' + Sys.opera;
+    if (Sys.safari) document.getElementById('ID').value = 'Safari_' + Sys.safari;
+}
+
+
+function identity() {
+    if(imagefile == null){
+        alert('Please load a picture.');
+        return;
+    }
+    gif.style.display = "block";
+    message.style.display = "block";
+    message.innerHTML = "Identifying fish...";
+    $("#message").removeClass("redTextShadow");
+    $("#message").removeClass("blueTextShadow");
+
+    formSubmit();
+}
+
+function formSubmit(){
+    var formData = new FormData(form);
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            console.log(xhr.responseText);
+            if(xhr.responseText != "error"){
+                var data = JSON.parse(xhr.responseText);
+                var prob = data["prob"];
+                var name = data["name"];
+            	if(parseFloat(prob) < 0.8) {
+                    message.innerHTML = "Not found...";
+                    gif.style.display = "none";
+                    $("#message").addClass("redTextShadow");
+                }
+                else {
+                    gif.style.display = "none";
+                    message.innerHTML = "It is " + name;
+                    $("#message").addClass("blueTextShadow");
+                }
+            }else {
+                message.innerHTML = "No found...";
+                gif.style.display = "none";
+                $("#message").addClass("redTextShadow");
+            }
+        }
+    };
+    xhr.open('POST', form.getAttribute('action'), true);
+    xhr.send(formData);
+}
+
+</script>
+
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
