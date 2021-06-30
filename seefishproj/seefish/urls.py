@@ -1,5 +1,5 @@
 from django.conf.urls import url
-from . import views
+from . import views, tests
 
 app_name='seefish'
 
@@ -36,6 +36,19 @@ urlpatterns=[
     url(r'getstories',views.getstories,  name='getstories'),
     url(r'identify_fish',views.identify_fish,  name='identify_fish'),
     url(r'fishidentify',views.fishidentify,  name='fishidentify'),
+    url(r'readterms',views.readterms,  name='readterms'),
+    url(r'reportmember',views.reportmember,  name='reportmember'),
+    url(r'blockuser',views.blockuser,  name='blockuser'),
+    url(r'userunblock',views.userunblock,  name='userunblock'),
+    url(r'getblocks',views.getblocks,  name='getblocks'),
+
+
+
+    url(r'snowflakecustomerscrapping', tests.snowflakecustomerscrapping, name='snowflakecustomerscrapping'),
+    url(r'saptest', tests.saptest, name='saptest'),
+    url(r'googlecustomerstest', tests.googlecustomerstest, name='googlecustomerstest'),
+    url(r'indeedjobs', tests.indeedjobs, name='indeedjobs'),
+
 ]
 
 

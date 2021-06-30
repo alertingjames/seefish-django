@@ -52,7 +52,7 @@ import random
 from pyfcm import FCMNotification
 import pyrebase
 
-from seefish.models import Member, Post, PostPicture, Comment, PostLike, PostSave, Follow, Story, StoryView, StoryPicture, Fish
+from seefish.models import Member, Post, PostPicture, Comment, PostLike, PostSave, Follow, Story, StoryView, StoryPicture, Fish, Report, Block
 from seefish.serializers import MemberSerializer, PostSerializer, PostPictureSerializer, CommentSerializer, PostLikeSerializer, PostSaveSerializer, StorySerializer
 
 config = {
@@ -90,8 +90,8 @@ def identify_fish(request):
         fish.image_url = settings.URL + uploaded_url
         fish.save()
 
-        client = RecognitionClient(token="332bcfc62253148ca49a9e5bfd937f12c6cbd2cb")
-        task, sts = client.get_task(task_id='b5f9df63-2f93-4d8a-a3d4-d26b844dc339')
+        client = RecognitionClient(token="76482af25bee9c726ec40c6920f5412dff667a97")
+        task, sts = client.get_task(task_id='4650b6bb-435a-411c-a1c1-016b92292780')
         result = task.classify([{'_url': fish.image_url}])
         if result != None:
             best_label = result['records'][0]['best_label']
@@ -216,7 +216,7 @@ def forgotpassword(request):
                         <head></head>
                         <body>
                             <div style="display:inline-block;">
-                                <img src="https://cayley5.pythonanywhere.com/static/images/512.png" style="width:150px;height:150px; margin-left:25px; border-radius:8%;"/>
+                                <img src="https://cayley5.pythonanywhere.com/static/images/logo.png" style="width:150px;height:150px; margin-left:25px; border-radius:8%;"/>
                                 <div style="margin-top:-150px;">
                                     <img src="https://cayley5.pythonanywhere.com/static/images/title.png" style="width:180px; float:left;">
                                     <h3 style="color:#02839a; float:left; margin-top:32px;">Security Info Update</h3>
@@ -336,7 +336,11 @@ def networkposts(request):
                     'pics': str(pps.count())
                 }
 
-                postList.append(data)
+                blocks = Block.objects.filter(member_id=memb.pk, blocker_id=member_id)
+                blocks2 = Block.objects.filter(member_id=member_id, blocker_id=memb.pk)
+
+                if blocks.count() == 0 and blocks2.count() == 0:
+                    postList.append(data)
 
         resp = {'result_code':'0', 'posts': postList}
         return HttpResponse(json.dumps(resp))
@@ -364,6 +368,16 @@ def likepost(request):
             return HttpResponse(json.dumps(resp))
 
         post = posts[0]
+
+        blocks = Block.objects.filter(member_id=post.member_id, blocker_id=member_id)
+        blocks2 = Block.objects.filter(member_id=member_id, blocker_id=post.member_id)
+        if blocks.count() > 0:
+            resp = {'result_code':'101'}
+            return HttpResponse(json.dumps(resp))
+        if blocks2.count() > 0:
+            resp = {'result_code':'102'}
+            return HttpResponse(json.dumps(resp))
+
         pls = PostLike.objects.filter(post_id=post.pk, member_id=me.pk)
         if pls.count() > 0:
             pls[0].delete()
@@ -405,6 +419,16 @@ def savepost(request):
             return HttpResponse(json.dumps(resp))
 
         post = posts[0]
+
+        blocks = Block.objects.filter(member_id=post.member_id, blocker_id=member_id)
+        blocks2 = Block.objects.filter(member_id=member_id, blocker_id=post.member_id)
+        if blocks.count() > 0:
+            resp = {'result_code':'101'}
+            return HttpResponse(json.dumps(resp))
+        if blocks2.count() > 0:
+            resp = {'result_code':'102'}
+            return HttpResponse(json.dumps(resp))
+
         psvs = PostSave.objects.filter(post_id=post.pk, member_id=me.pk)
         if psvs.count() > 0:
             psvs[0].delete()
@@ -437,6 +461,15 @@ def getcomments(request):
 
         post = posts[0]
 
+        blocksa = Block.objects.filter(member_id=post.member_id, blocker_id=me_id)
+        blocksb = Block.objects.filter(member_id=me_id, blocker_id=post.member_id)
+        if blocksa.count() > 0:
+            resp = {'result_code':'101'}
+            return HttpResponse(json.dumps(resp))
+        if blocksb.count() > 0:
+            resp = {'result_code':'102'}
+            return HttpResponse(json.dumps(resp))
+
         comments = Comment.objects.filter(post_id=post.pk).order_by('-id')
         commentList = []
         for comment in comments:
@@ -457,13 +490,20 @@ def getcomments(request):
                     member.followed = 'yes'
                 else: member.followed = 'no'
 
+                blocks = Block.objects.filter(member_id=member.pk, blocker_id=me_id)
+                if blocks.count() > 0:
+                    member.status = 'blocked'
+
                 comment_serializer = CommentSerializer(comment, many=False)
                 member_serializer = MemberSerializer(member, many=False)
                 data = {
                     'comment':comment_serializer.data,
                     'member':member_serializer.data
                 }
-                commentList.append(data)
+
+                blocks2 = Block.objects.filter(member_id=me_id, blocker_id=member.pk)
+                if blocks2.count() == 0:
+                    commentList.append(data)
 
         resp = {'result_code':'0', 'data':commentList}
         return HttpResponse(json.dumps(resp))
@@ -486,6 +526,22 @@ def submitcomment(request):
 
         me = members[0]
 
+        posts = Post.objects.filter(id=post_id)
+        if posts.count() == 0:
+            resp = {'result_code': '2'}
+            return HttpResponse(json.dumps(resp))
+
+        post = posts[0]
+
+        blocks = Block.objects.filter(member_id=post.member_id, blocker_id=member_id)
+        blocks2 = Block.objects.filter(member_id=member_id, blocker_id=post.member_id)
+        if blocks.count() > 0:
+            resp = {'result_code':'101'}
+            return HttpResponse(json.dumps(resp))
+        if blocks2.count() > 0:
+            resp = {'result_code':'102'}
+            return HttpResponse(json.dumps(resp))
+
         comments = Comment.objects.filter(post_id=post_id, member_id=me.pk)
         if comments.count() == 0:
             comment = Comment()
@@ -496,11 +552,6 @@ def submitcomment(request):
 
             comment.save()
 
-            posts = Post.objects.filter(id=post_id)
-            if posts.count() == 0:
-                resp = {'result_code': '2'}
-                return HttpResponse(json.dumps(resp))
-            post = posts[0]
             post.comments = str(int(post.comments) + 1)
             post.save()
 
@@ -671,7 +722,12 @@ def createimagepost(request):
             flwers = Member.objects.filter(id=int(flw.follower_id))
             if flwers.count() > 0:
                 flwer = flwers[0]
-                toids.append(flwer.pk)
+
+                blocks = Block.objects.filter(member_id=flwer.pk, blocker_id=member_id)
+                blocks2 = Block.objects.filter(member_id=member_id, blocker_id=flwer.pk)
+                if blocks.count() == 0 and blocks2.count() == 0:
+                    toids.append(flwer.pk)
+
         sendMessageToFollowers(toids, message)
 
         resp = {'result_code': '0'}
@@ -764,7 +820,12 @@ def createvideopost(request):
             flwers = Member.objects.filter(id=int(flw.follower_id))
             if flwers.count() > 0:
                 flwer = flwers[0]
-                toids.append(flwer.pk)
+
+                blocks = Block.objects.filter(member_id=flwer.pk, blocker_id=member_id)
+                blocks2 = Block.objects.filter(member_id=member_id, blocker_id=flwer.pk)
+                if blocks.count() == 0 and blocks2.count() == 0:
+                    toids.append(flwer.pk)
+
         sendMessageToFollowers(toids, message)
 
         resp = {'result_code': '0'}
@@ -785,6 +846,15 @@ def sendmessage(request):
             return HttpResponse(json.dumps(resp))
 
         me = members[0]
+
+        blocks = Block.objects.filter(member_id=member_id, blocker_id=me_id)
+        blocks2 = Block.objects.filter(member_id=me_id, blocker_id=member_id)
+        if blocks.count() > 0:
+            resp = {'result_code':'101'}
+            return HttpResponse(json.dumps(resp))
+        if blocks2.count() > 0:
+            resp = {'result_code':'102'}
+            return HttpResponse(json.dumps(resp))
 
         members = Member.objects.filter(id=int(member_id))
         if members.count() > 0:
@@ -829,7 +899,7 @@ def send_mail_message(from_email, to_emails, title, subject, message):
                 <html>
                     <head></head>
                     <body>
-                        <a href="#"><img src="https://cayley5.pythonanywhere.com/static/images/512.png" style="width:150px;height:150px;border-radius: 8%; margin-left:25px;"/></a>
+                        <a href="#"><img src="https://cayley5.pythonanywhere.com/static/images/logo.png" style="width:150px;height:150px;border-radius: 8%; margin-left:25px;"/></a>
                         <h2 style="margin-left:10px; color:#02839a;">{title}</h2>
                         <div style="font-size:14px; white-space: pre-line; word-wrap: break-word;">
                             {mes}
@@ -901,22 +971,24 @@ def getallmembers(request):
         memberList = []
         for member in members:
             if member.pk != me.pk:
+                blocks = Block.objects.filter(member_id=member.pk, blocker_id=me.pk)
+                blocks2 = Block.objects.filter(member_id=me.pk, blocker_id=member.pk)
+                if blocks.count() == 0 and blocks2.count() == 0:
+                    followers = Follow.objects.filter(member_id=member.pk)
+                    member.followers = str(followers.count())
+                    followings = Follow.objects.filter(follower_id=member.pk)
+                    member.followings = str(followings.count())
+                    feeds = Post.objects.filter(member_id=member.pk)
+                    member.feeds = str(feeds.count())
 
-                followers = Follow.objects.filter(member_id=member.pk)
-                member.followers = str(followers.count())
-                followings = Follow.objects.filter(follower_id=member.pk)
-                member.followings = str(followings.count())
-                feeds = Post.objects.filter(member_id=member.pk)
-                member.feeds = str(feeds.count())
+                    flws = Follow.objects.filter(member_id=member.pk, follower_id=me.pk)
+                    if flws.count() > 0:
+                        member.followed = 'yes'
+                    else: member.followed = 'no'
 
-                flws = Follow.objects.filter(member_id=member.pk, follower_id=me.pk)
-                if flws.count() > 0:
-                    member.followed = 'yes'
-                else: member.followed = 'no'
-
-                me_follows = Follow.objects.filter(member_id=me.pk, follower_id=member.pk)
-                if me_follows.count() > 0: memberList.insert(0, member)
-                else: memberList.append(member)
+                    me_follows = Follow.objects.filter(member_id=me.pk, follower_id=member.pk)
+                    if me_follows.count() > 0: memberList.insert(0, member)
+                    else: memberList.append(member)
         serializer = MemberSerializer(memberList, many=True)
 
         resp = {'result_code': '0', 'users':serializer.data}
@@ -937,6 +1009,15 @@ def getmemberposts(request):
             return HttpResponse(json.dumps(resp))
 
         me = members[0]
+
+        blocks = Block.objects.filter(member_id=member_id, blocker_id=me_id)
+        blocks2 = Block.objects.filter(member_id=me_id, blocker_id=member_id)
+        if blocks.count() > 0 :
+            resp = {'result_code': '101'}
+            return HttpResponse(json.dumps(resp))
+        if blocks2.count() > 0 :
+            resp = {'result_code': '102'}
+            return HttpResponse(json.dumps(resp))
 
         postList = []
 
@@ -985,6 +1066,15 @@ def followmember(request):
             return HttpResponse(json.dumps(resp))
 
         me = members[0]
+
+        blocks = Block.objects.filter(member_id=member_id, blocker_id=me_id)
+        blocks2 = Block.objects.filter(member_id=me_id, blocker_id=member_id)
+        if blocks.count() > 0 :
+            resp = {'result_code': '101'}
+            return HttpResponse(json.dumps(resp))
+        if blocks2.count() > 0 :
+            resp = {'result_code': '102'}
+            return HttpResponse(json.dumps(resp))
 
         members = Member.objects.filter(id=member_id)
         if members.count() == 0:
@@ -1274,8 +1364,8 @@ def fishidentify(request):
         fish.image_url = settings.URL + uploaded_url
         fish.save()
 
-        client = RecognitionClient(token="332bcfc62253148ca49a9e5bfd937f12c6cbd2cb")
-        task, sts = client.get_task(task_id='b5f9df63-2f93-4d8a-a3d4-d26b844dc339')
+        client = RecognitionClient(token="76482af25bee9c726ec40c6920f5412dff667a97")
+        task, sts = client.get_task(task_id='4650b6bb-435a-411c-a1c1-016b92292780')
         result = task.classify([{'_url': fish.image_url}])
         if result != None:
             best_label = result['records'][0]['best_label']
@@ -1289,6 +1379,150 @@ def fishidentify(request):
             return HttpResponse(json.dumps(data))
         else:
             return HttpResponse(json.dumps({"result_code":"1"}))
+
+
+
+
+@api_view(['GET', 'POST'])
+def reportmember(request):
+    if request.method == 'POST':
+        member_id = request.POST.get('member_id', '1')
+        reporter_id = request.POST.get('reporter_id', '1')
+        message = request.POST.get('message', '')
+        members = Member.objects.filter(id=member_id)
+        if members.count() == 0 :
+            resp = {'result_code': '1'}
+            return HttpResponse(json.dumps(resp))
+        report = Report()
+        report.member_id = member_id
+        report.reporter_id = reporter_id
+        report.message = message
+        report.reported_time = str(int(round(time.time() * 1000)))
+        report.save()
+
+        resp = {'result_code': '0'}
+        return HttpResponse(json.dumps(resp))
+
+
+
+
+@api_view(['GET', 'POST'])
+def readterms(request):
+    if request.method == 'POST':
+        member_id = request.POST.get('member_id', '1')
+        members = Member.objects.filter(id=member_id)
+        if members.count() == 0 :
+            resp = {'result_code': '1'}
+            return HttpResponse(json.dumps(resp))
+        member = members[0]
+        member.terms = "read_terms"
+        member.save()
+
+        resp = {'result_code': '0'}
+        return HttpResponse(json.dumps(resp))
+
+
+
+@api_view(['GET', 'POST'])
+def userunblock(request):
+    if request.method == 'POST':
+        member_id = request.POST.get('member_id', '1')
+        blocker_id = request.POST.get('blocker_id', '1')
+
+        blocks = Block.objects.filter(member_id=member_id, blocker_id=blocker_id)
+        if blocks.count() > 0:
+            block = blocks[0]
+            block.delete()
+            resp = {'result_code': '0'}
+            return HttpResponse(json.dumps(resp))
+
+        resp = {'result_code': '0'}
+        return HttpResponse(json.dumps(resp))
+
+
+@api_view(['GET', 'POST'])
+def blockuser(request):
+    if request.method == 'POST':
+        member_id = request.POST.get('member_id', '1')
+        blocker_id = request.POST.get('blocker_id', '1')
+
+        block = Block()
+        block.member_id = member_id
+        block.blocker_id = blocker_id
+        block.blocked_time = str(int(round(time.time() * 1000)))
+        block.save()
+
+        resp = {'result_code': '0'}
+        return HttpResponse(json.dumps(resp))
+
+
+
+@api_view(['GET', 'POST'])
+def getblocks(request):
+
+    if request.method == 'POST':
+        member_id = request.POST.get('member_id','0')
+
+        memberList = []
+        blocks = Block.objects.filter(blocker_id=member_id).order_by('-id')
+        for block in blocks:
+            members = Member.objects.filter(id=int(block.member_id))
+            if members.count() > 0:
+                member = members[0]
+
+                followers = Follow.objects.filter(member_id=member.pk)
+                member.followers = str(followers.count())
+                followings = Follow.objects.filter(follower_id=member.pk)
+                member.followings = str(followings.count())
+                feeds = Post.objects.filter(member_id=member.pk)
+                member.feeds = str(feeds.count())
+
+                flws = Follow.objects.filter(member_id=member.pk, follower_id=member_id)
+                if flws.count() > 0:
+                    member.followed = 'yes'
+                else: member.followed = 'no'
+
+                memberList.append(member)
+
+        serializer = MemberSerializer(memberList, many=True)
+
+        resp = {'result_code': '0', 'users':serializer.data}
+        return HttpResponse(json.dumps(resp))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

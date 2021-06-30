@@ -19,6 +19,8 @@ class Member(models.Model):
     followers = models.CharField(max_length=11)
     followings = models.CharField(max_length=11)
     followed = models.CharField(max_length=50)
+    # blocking = models.CharField(max_length=50)
+    # blocked = models.CharField(max_length=50)
     feeds = models.CharField(max_length=11)
     playerID = models.CharField(max_length=300)
     fcm_token = models.CharField(max_length=500)
@@ -96,10 +98,19 @@ class Fish(models.Model):
     image_url = models.CharField(max_length=1000)
 
 
+class Report(models.Model):
+    member_id = models.CharField(max_length=11)
+    reporter_id = models.CharField(max_length=11)
+    message = models.CharField(max_length=2000)
+    reported_time = models.CharField(max_length=50)
+    status = models.CharField(max_length=20)
 
 
-
-
+class Block(models.Model):
+    member_id = models.CharField(max_length=11)
+    blocker_id = models.CharField(max_length=11)
+    blocked_time = models.CharField(max_length=50)
+    status = models.CharField(max_length=20)
 
 
 

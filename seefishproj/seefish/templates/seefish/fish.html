@@ -239,7 +239,7 @@ function formSubmit(){
                 var data = JSON.parse(xhr.responseText);
                 var prob = data["prob"];
                 var name = data["name"];
-            	if(parseFloat(prob) < 0.8) {
+            	if(parseFloat(prob) < 0.6) {
                     message.innerHTML = "Not found...";
                     gif.style.display = "none";
                     $("#message").addClass("redTextShadow");
